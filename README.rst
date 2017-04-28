@@ -14,7 +14,7 @@ Requirements
 ------------
 
 -  Bash
--  Python 3
+-  Python 3.5+
 
 Install
 -------

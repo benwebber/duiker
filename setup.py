@@ -1,6 +1,14 @@
 # -*- coding: utf-8 -*-
 
+import sys
+
 import setuptools
+
+if sys.version_info < (3, 5):
+    error='Duiker requires Python 3.5 or greater ({version.major}.{version.minor}.{version.micro} installed).'.format(version=sys.version_info)
+    print(error, file=sys.stderr)
+    sys.exit(1)
+
 
 setuptools.setup(
     name='duiker',

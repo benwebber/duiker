@@ -21,6 +21,7 @@ __version__ = '0.1.0'
 XDG_DATA_HOME = os.environ.get('XDG_DATA_HOME', '~/.local/share')
 DUIKER_HOME = os.environ.get('DUIKER_HOME', pathlib.Path(XDG_DATA_HOME, 'duiker'))
 DUIKER_DB = DUIKER_HOME / 'duiker.db'
+HISTTIMEFORMAT = os.environ.get('HISTTIMEFORMAT')
 
 MAGIC = '''
 __duiker_import() {
@@ -29,6 +30,13 @@ __duiker_import() {
     history 1 | duiker import --quiet -
     HISTIGNORE=$old_histignore
 }'''
+
+
+class PrefixWrapper(textwrap.TextWrapper):
+    def __init__(self, prefix, *args, **kwargs):
+        super().__init__(*args, initial_indent=prefix, subsequent_indent=prefix,
+                         break_long_words=False, break_on_hyphens=False,
+                         **kwargs)
 
 
 class Command(namedtuple('Command', ('id', 'timestamp', 'command'))):
@@ -296,12 +304,29 @@ Add this function to your $PROMPT_COMMAND:
     return parser.parse_args(argv)
 
 
+def error(message):
+    print('\n'.join(PrefixWrapper('error: ').wrap(message)), file=sys.stderr)
+
+
+def hint(message):
+    print('\n'.join(PrefixWrapper('hint: ').wrap(message)), file=sys.stderr)
+
+
 def main():
     args = parse_args(sys.argv[1:])
 
     if args.command == 'import' and args.histfile is sys.stdin:
         # Python opens stdin in strict mode by default.
         args.histfile = io.TextIOWrapper(sys.stdin.buffer, errors='replace')
+
+    if HISTTIMEFORMAT:
+        try:
+            timestamp = dt.now().strftime(HISTTIMEFORMAT)
+            dt.strptime(timestamp, HISTTIMEFORMAT)
+        except ValueError:
+            error('Cannot parse HISTTIMEFORMAT ({}).'.format(HISTTIMEFORMAT))
+            hint('Use only standard format codes: <https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior>.')
+            sys.exit(1)
 
     try:
         args.func(args)

@@ -4,6 +4,11 @@ duiker change log
 Unreleased
 ----------
 
+Added
+~~~~~
+
+* Added `head` and `tail` commands to show first or last *N* commands.
+
 Fixed
 ~~~~~
 

@@ -166,6 +166,14 @@ class Duiker:
                   WHERE fts_history MATCH ?;'''
         return self._execute(fts, (expr,))
 
+    def head(self, num):
+        query = '''SELECT * FROM history ORDER BY timestamp ASC LIMIT ?'''
+        return self._execute(query, (num,))
+
+    def tail(self, num):
+        query = '''SELECT * FROM history ORDER BY timestamp DESC LIMIT ?'''
+        return self._execute(query, (num,))
+
 
 def sizeof_human(size, binary=True):
     """
@@ -205,6 +213,18 @@ def handle_search(args):
 def handle_log(args):
     duiker = Duiker(DUIKER_DB.as_posix())
     for command in duiker.log():
+        logger.info('{:tsv}'.format(command))
+
+
+def handle_head(args):
+    duiker = Duiker(DUIKER_DB.as_posix())
+    for command in duiker.head(args.entries):
+        logger.info('{:tsv}'.format(command))
+
+
+def handle_tail(args):
+    duiker = Duiker(DUIKER_DB.as_posix())
+    for command in duiker.tail(args.entries):
         logger.info('{:tsv}'.format(command))
 
 
@@ -307,6 +327,14 @@ Add this function to your $PROMPT_COMMAND:
 
     version = subparsers.add_parser('version', description='Show version and exit.')
     version.set_defaults(func=handle_version)
+
+    head = subparsers.add_parser('head', description='Show first N commands.')
+    head.add_argument('-n', '--entries', help='recall first N commands [%(default)s]', default=10)
+    head.set_defaults(func=handle_head)
+
+    tail = subparsers.add_parser('tail', description='Show last N commands.')
+    tail.add_argument('-n', '--entries', help='recall last N commands [%(default)s]', default=10)
+    tail.set_defaults(func=handle_tail)
 
     return parser.parse_args(argv)
 

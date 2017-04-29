@@ -114,7 +114,7 @@ class Duiker:
                     continue
                 db.execute('INSERT INTO history VALUES (?, ?, ?)', command)
                 db.execute('INSERT INTO fts_history SELECT id, command FROM history WHERE rowid = last_insert_rowid()')
-                logger.info('Imported `{command}` issued {timestamp}'.format(command=command.command, timestamp=render_timestamp(command.timestamp)))
+                logger.info('Imported `%s` issued %s', command.command, render_timestamp(command.timestamp))
 
     def _parse_line(self, line):
         # Strip history file line ID.

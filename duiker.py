@@ -182,16 +182,13 @@ def sizeof_human(size, binary=True):
     Adapted from: <http://stackoverflow.com/a/1094933>.
     """
     mod = 1024 if binary else 1000
-    suffix = 'iB' if binary else 'B'
-    units = ('', 'k', 'M', 'G', 'T', 'P', 'E', 'Z')
-    for idx, unit in enumerate(units):
-        exp = idx * 3
+    prefixes = [prefix + 'i' if (prefix and binary) else prefix
+                for prefix in ('', 'k', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')]
+    for prefix in prefixes[:-1]:
         if abs(size) < mod:
-            # Don't render "N iB".
-            suffix = 'B' if not unit else suffix
-            return '{size:.1f} {unit}{suffix}'.format(size=size, unit=unit, suffix=suffix)
+            return '{size:.1f} {prefix}B'.format(size=size, prefix=prefix)
         size /= mod
-    return '{size:.1f} Y{suffix}'.format(size=size, unit=unit, suffix=suffix)
+    return '{size:.1f} {prefix}B'.format(size=size, prefix=prefixes[-1])
 
 
 def render_timestamp(timestamp):

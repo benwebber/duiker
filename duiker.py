@@ -174,6 +174,9 @@ class Duiker:
         query = '''SELECT * FROM history ORDER BY timestamp DESC LIMIT ?'''
         return self._execute(query, (num,))
 
+    def shell(self, *args):
+        os.execvp('sqlite3', ['sqlite3'] + list(args) + [self.db])
+
 
 def sizeof_human(size, binary=True):
     """
@@ -223,6 +226,11 @@ def handle_tail(args):
     duiker = Duiker(DUIKER_DB.as_posix())
     for command in duiker.tail(args.entries):
         logger.info('{:tsv}'.format(command))
+
+
+def handle_shell(args):
+    duiker = Duiker(DUIKER_DB.as_posix())
+    duiker.shell(*args.sqlite3_options)
 
 
 def handle_magic(args):
@@ -332,6 +340,18 @@ Add this function to your $PROMPT_COMMAND:
     tail = subparsers.add_parser('tail', description='Show last N commands.')
     tail.add_argument('-n', '--entries', help='recall last N commands [%(default)s]', default=10)
     tail.set_defaults(func=handle_tail)
+
+    shell = subparsers.add_parser(
+        'sqlite3',
+        aliases=['sql', 'shell'],
+        description='Open the database in the SQLite3 shell.',
+    )
+    shell.add_argument(
+        'sqlite3_options',
+        metavar='OPTIONS', nargs=argparse.REMAINDER,
+        help='Pass all options after `--` to SQLite3 shell.',
+    )
+    shell.set_defaults(func=handle_shell)
 
     return parser.parse_args(argv)
 

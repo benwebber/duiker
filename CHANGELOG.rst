@@ -8,6 +8,7 @@ Added
 ~~~~~
 
 * Added `head` and `tail` commands to show first or last *N* commands.
+* Added `sqlite3` (`sql`, `shell`) command to open database in SQLite3 shell.
 
 Fixed
 ~~~~~

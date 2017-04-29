@@ -7,6 +7,7 @@ Automatically index your shell history in a full-text search database. Magic!
 import argparse
 from collections import namedtuple
 from datetime import datetime as dt
+import logging
 import io
 import os
 import pathlib
@@ -30,6 +31,14 @@ __duiker_import() {
     history 1 | duiker import --quiet -
     HISTIGNORE=$old_histignore
 }'''
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+stdout = logging.StreamHandler(sys.stdout)
+
+logger.addHandler(stdout)
 
 
 class PrefixWrapper(textwrap.TextWrapper):
@@ -105,7 +114,7 @@ class Duiker:
                     continue
                 db.execute('INSERT INTO history VALUES (?, ?, ?)', command)
                 db.execute('INSERT INTO fts_history SELECT id, command FROM history WHERE rowid = last_insert_rowid()')
-                yield command
+                logger.info('Imported `{command}` issued {timestamp}'.format(command=command.command, timestamp=render_timestamp(command.timestamp)))
 
     def _parse_line(self, line):
         # Strip history file line ID.
@@ -184,21 +193,19 @@ def render_timestamp(timestamp):
 
 def handle_import(args):
     duiker = Duiker(DUIKER_DB.as_posix())
-    for command in duiker.import_file(args.histfile):
-        if not args.quiet:
-            print('Imported `{command}` issued {timestamp}'.format(command=command.command, timestamp=render_timestamp(command.timestamp)))
+    duiker.import_file(args.histfile)
 
 
 def handle_search(args):
     duiker = Duiker(DUIKER_DB.as_posix())
     for command in duiker.search(args.expression):
-        print('{:tsv}'.format(command))
+        logger.info('{:tsv}'.format(command))
 
 
 def handle_log(args):
     duiker = Duiker(DUIKER_DB.as_posix())
     for command in duiker.log():
-        print('{:tsv}'.format(command))
+        logger.info('{:tsv}'.format(command))
 
 
 def handle_magic(args):
@@ -315,9 +322,12 @@ def hint(message):
 def main():
     args = parse_args(sys.argv[1:])
 
-    if args.command == 'import' and args.histfile is sys.stdin:
-        # Python opens stdin in strict mode by default.
-        args.histfile = io.TextIOWrapper(sys.stdin.buffer, errors='replace')
+    if args.command == 'import':
+        if args.quiet:
+            logger.setLevel(logging.CRITICAL)
+        if args.histfile is sys.stdin:
+            # Python opens stdin in strict mode by default.
+            args.histfile = io.TextIOWrapper(sys.stdin.buffer, errors='replace')
 
     if HISTTIMEFORMAT:
         try:

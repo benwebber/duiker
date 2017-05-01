@@ -11,7 +11,6 @@ import logging
 import io
 import os
 import pathlib
-import re
 import sqlite3
 import sys
 import textwrap
@@ -32,13 +31,16 @@ __duiker_import() {
     HISTIGNORE=$old_histignore
 }'''
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 stdout = logging.StreamHandler(sys.stdout)
 
 logger.addHandler(stdout)
+
+
+class ParseError(Exception):
+    pass
 
 
 class PrefixWrapper(textwrap.TextWrapper):
@@ -62,8 +64,6 @@ class Command(namedtuple('Command', ('id', 'timestamp', 'command'))):
 
 class Duiker:
 
-    HISTLINE_EXPR = re.compile(r'^\s*\d+\s+(?P<remainder>.*)', flags=re.M)
-
     SCHEMA = """
     CREATE TABLE IF NOT EXISTS history (
         id        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,23 +81,6 @@ class Duiker:
     def __init__(self, db, create=True):
         self.db = db
 
-        # We want to split each history line into two components: timestamp and
-        # command.
-        #
-        # Unfortunately, Bash doesn't use special characters to delimit these
-        # fields. Furthermore, if HISTTIMEFORMAT contains spaces, we can't use
-        # str.split().
-        #
-        # Instead, calculate the string length of the timestamp by rendering a
-        # sample date with the same format. Use this as an offset to split the
-        # fields.
-        self.hist_time_format = os.environ.get('HISTTIMEFORMAT')
-        if self.hist_time_format:
-            prefix = dt.fromtimestamp(0).strftime(self.hist_time_format)
-            self._hist_offset = len(prefix)
-        else:
-            self._hist_offset = 0
-
         if create:
             DUIKER_HOME.mkdir(mode=0o700, parents=True, exist_ok=True)
             with sqlite3.connect(self.db) as db:
@@ -105,28 +88,18 @@ class Duiker:
                 db.execute('PRAGMA user_version = {}'.format(self.SCHEMA_VERSION))
 
     def import_file(self, histfile):
+        histtimeformat = os.environ.get('HISTTIMEFORMAT')
         with sqlite3.connect(self.db) as db:
             for line in histfile:
                 try:
-                    command = self._parse_line(line)
-                except AttributeError:
-                    # Record did not match regex (possibly invalid).
-                    continue
+                    command = parse_history_line(line, histtimeformat)
+                except Exception as exc:
+                    raise ParseError(exc)
+                if command.timestamp is None:
+                    command = command._replace(timestamp=time.mktime(dt.now().timetuple()))
                 db.execute('INSERT INTO history VALUES (?, ?, ?)', command)
                 db.execute('INSERT INTO fts_history SELECT id, command FROM history WHERE rowid = last_insert_rowid()')
                 logger.info('Imported `%s` issued %s', command.command, render_timestamp(command.timestamp))
-
-    def _parse_line(self, line):
-        # Strip history file line ID.
-        match = self.HISTLINE_EXPR.match(line)
-        remainder = match.group('remainder')
-        if self.hist_time_format:
-            timestamp = dt.strptime(remainder[:self._hist_offset], self.hist_time_format)
-            command = remainder[self._hist_offset:]
-        else:
-            timestamp = time.mktime(dt.now().timetuple())
-            command = remainder
-        return Command(None, time.mktime(timestamp.timetuple()), command)
 
     def _execute(self, query, params=None):
         params = params if params else ()
@@ -178,6 +151,39 @@ class Duiker:
         os.execvp('sqlite3', ['sqlite3'] + list(args) + [self.db])
 
 
+def parse_history_line(line, histtimeformat=None):
+    """
+    Extract the timestamp and command from a line of `history` output.
+    """
+    # Split line ID and timestamp/command (remainder).
+    _, remainder = line.split(None, 1)
+    remainder = remainder.rstrip()
+    if histtimeformat:
+        # datetime.strptime() raises ValueError if the string does not exactly
+        # match the format string.
+        try:
+            # Dummy test: we need to inspect the ValueError.
+            dt.strptime(remainder, histtimeformat)
+        except ValueError as exc:
+            # Extract the command from the ValueError error message and re-parse
+            # the timestamp. This feels quite fragile, but this error message
+            # hasn't changed since 2.3:
+            #
+            # <https://github.com/python/cpython/blame/v3.6.1/Lib/_strptime.py#L363-L365>
+            message = exc.args[0]
+            if 'unconverted data remains: ' in message:
+                command = exc.args[0].replace('unconverted data remains: ', '')
+                timestamp = remainder.replace(command, '')
+                timestamp = time.mktime(dt.strptime(timestamp, histtimeformat).timetuple())
+            else:
+                # Raised another sort of ValueError.
+                raise
+    else:
+        command = remainder
+        timestamp = None
+    return Command(None, timestamp, command)
+
+
 def sizeof_human(size, binary=True):
     """
     Render human-readable file sizes.
@@ -201,7 +207,10 @@ def render_timestamp(timestamp):
 
 def handle_import(args):
     duiker = Duiker(DUIKER_DB.as_posix())
-    duiker.import_file(args.histfile)
+    try:
+        duiker.import_file(args.histfile)
+    except ParseError as exc:
+        error(str(exc))
 
 
 def handle_search(args):

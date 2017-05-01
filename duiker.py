@@ -190,9 +190,12 @@ def sizeof_human(size, binary=True):
 
     Adapted from: <http://stackoverflow.com/a/1094933>.
     """
-    mod = 1024 if binary else 1000
-    prefixes = [prefix + 'i' if (prefix and binary) else prefix
-                for prefix in ('', 'k', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')]
+    if binary:
+        mod = 1024
+        prefixes = ('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi')
+    else:
+        mod = 1000
+        prefixes = ('', 'k', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
     for prefix in prefixes[:-1]:
         if abs(size) < mod:
             return '{size:.1f} {prefix}B'.format(size=size, prefix=prefix)

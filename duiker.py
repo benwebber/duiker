@@ -20,7 +20,7 @@ __version__ = '0.1.0'
 
 XDG_DATA_HOME = os.environ.get('XDG_DATA_HOME', '~/.local/share')
 DUIKER_HOME = os.environ.get('DUIKER_HOME', pathlib.Path(XDG_DATA_HOME, 'duiker'))
-DUIKER_DB = DUIKER_HOME / 'duiker.db'
+DUIKER_DB = DUIKER_HOME.expanduser() / 'duiker.db'
 HISTTIMEFORMAT = os.environ.get('HISTTIMEFORMAT')
 
 MAGIC = '''

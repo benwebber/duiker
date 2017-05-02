@@ -175,6 +175,7 @@ def parse_history_line(line, histtimeformat=None):
                 command = exc.args[0].replace('unconverted data remains: ', '')
                 timestamp = remainder.replace(command, '')
                 timestamp = time.mktime(dt.strptime(timestamp, histtimeformat).timetuple())
+                command = command.strip()
             else:
                 # Raised another sort of ValueError.
                 raise

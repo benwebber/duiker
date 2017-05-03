@@ -6,7 +6,7 @@ Automatically index your shell history in a full-text search database. Magic!
 
 import argparse
 from collections import namedtuple
-from datetime import datetime as dt
+import datetime as dt
 import logging
 import io
 import os
@@ -97,7 +97,7 @@ class Duiker:
                 except Exception as exc:
                     raise ParseError(exc)
                 if command.timestamp is None:
-                    command = command._replace(timestamp=time.mktime(dt.now().timetuple()))
+                    command = command._replace(timestamp=time.mktime(dt.datetime.now().timetuple()))
                 db.execute('INSERT INTO history VALUES (?, ?, ?)', command)
                 db.execute('INSERT INTO fts_history SELECT id, command FROM history WHERE rowid = last_insert_rowid()')
                 logger.info('Imported `%s` issued %s', command.command, render_timestamp(command.timestamp))
@@ -169,7 +169,7 @@ def parse_history_line(line, histtimeformat=None):
     return Command(None, timestamp, command)
 
 
-def strptime_prefix(text: str, fmt: str) -> Tuple[dt, str]:
+def strptime_prefix(text: str, fmt: str) -> Tuple[dt.datetime, str]:
     """
     Partially parse a string beginning with a datetime representation.
 
@@ -192,7 +192,7 @@ def strptime_prefix(text: str, fmt: str) -> Tuple[dt, str]:
     # match the format string.
     try:
         # Dummy test: we need to inspect the ValueError.
-        dt.strptime(text, fmt)
+        dt.datetime.strptime(text, fmt)
     except ValueError as exc:
         # Extract the command from the ValueError error message and re-parse
         # the timestamp. This feels quite fragile, but this error message
@@ -203,7 +203,7 @@ def strptime_prefix(text: str, fmt: str) -> Tuple[dt, str]:
         if 'unconverted data remains: ' in message:
             remainder = exc.args[0].replace('unconverted data remains: ', '')
             timestamp = text.replace(remainder, '')
-            return dt.strptime(timestamp, fmt), remainder
+            return dt.datetime.strptime(timestamp, fmt), remainder
         else:
             # Raised another sort of ValueError.
             raise
@@ -230,7 +230,7 @@ def sizeof_human(size, binary=True):
 
 def render_timestamp(timestamp):
     fmt = os.environ.get('HISTTIMEFORMAT')
-    return dt.fromtimestamp(timestamp).strftime(fmt) if fmt else timestamp
+    return dt.datetime.fromtimestamp(timestamp).strftime(fmt) if fmt else timestamp
 
 
 def handle_import(args):
@@ -413,8 +413,8 @@ def main():
 
     if HISTTIMEFORMAT:
         try:
-            timestamp = dt.now().strftime(HISTTIMEFORMAT)
-            dt.strptime(timestamp, HISTTIMEFORMAT)
+            timestamp = dt.datetime.now().strftime(HISTTIMEFORMAT)
+            dt.datetime.strptime(timestamp, HISTTIMEFORMAT)
         except ValueError:
             error('Cannot parse HISTTIMEFORMAT ({}).'.format(HISTTIMEFORMAT))
             hint('Use only standard format codes: <https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior>.')

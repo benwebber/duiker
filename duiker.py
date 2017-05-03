@@ -15,6 +15,7 @@ import sqlite3
 import sys
 import textwrap
 import time
+from typing import Tuple
 
 __version__ = '0.1.0'
 
@@ -159,30 +160,53 @@ def parse_history_line(line, histtimeformat=None):
     _, remainder = line.split(None, 1)
     remainder = remainder.rstrip()
     if histtimeformat:
-        # datetime.strptime() raises ValueError if the string does not exactly
-        # match the format string.
-        try:
-            # Dummy test: we need to inspect the ValueError.
-            dt.strptime(remainder, histtimeformat)
-        except ValueError as exc:
-            # Extract the command from the ValueError error message and re-parse
-            # the timestamp. This feels quite fragile, but this error message
-            # hasn't changed since 2.3:
-            #
-            # <https://github.com/python/cpython/blame/v3.6.1/Lib/_strptime.py#L363-L365>
-            message = exc.args[0]
-            if 'unconverted data remains: ' in message:
-                command = exc.args[0].replace('unconverted data remains: ', '')
-                timestamp = remainder.replace(command, '')
-                timestamp = time.mktime(dt.strptime(timestamp, histtimeformat).timetuple())
-                command = command.strip()
-            else:
-                # Raised another sort of ValueError.
-                raise
+        timestamp, command = strptime_prefix(remainder, histtimeformat)
+        command = command.strip()
+        timestamp = time.mktime(timestamp.timetuple())
     else:
         command = remainder
         timestamp = None
     return Command(None, timestamp, command)
+
+
+def strptime_prefix(text: str, fmt: str) -> Tuple[dt, str]:
+    """
+    Partially parse a string beginning with a datetime representation.
+
+    Returns the datetime and the rest of the string ("unconverted data").
+
+    >>> strptime_prefix('1970-01-01 hello world', '%Y-%m-%d')
+    (datetime.datetime(1970, 1, 1, 0, 0), ' hello world')
+
+    >>> strptime_prefix('hello world', '%Y-%m-%d')
+    Traceback (most recent call last):
+    ...
+    ValueError: time data 'hello world' does not match format '%Y-%m-%d'
+
+    >>> strptime_prefix('hello world 1970-01-01', '%Y-%m-%d')
+    Traceback (most recent call last):
+    ...
+    ValueError: time data 'hello world 1970-01-01' does not match format '%Y-%m-%d'
+    """
+    # datetime.strptime() raises ValueError if the string does not exactly
+    # match the format string.
+    try:
+        # Dummy test: we need to inspect the ValueError.
+        dt.strptime(text, fmt)
+    except ValueError as exc:
+        # Extract the command from the ValueError error message and re-parse
+        # the timestamp. This feels quite fragile, but this error message
+        # hasn't changed since 2.3:
+        #
+        # <https://github.com/python/cpython/blame/v3.6.1/Lib/_strptime.py#L363-L365>
+        message = exc.args[0]
+        if 'unconverted data remains: ' in message:
+            remainder = exc.args[0].replace('unconverted data remains: ', '')
+            timestamp = text.replace(remainder, '')
+            return dt.strptime(timestamp, fmt), remainder
+        else:
+            # Raised another sort of ValueError.
+            raise
 
 
 def sizeof_human(size, binary=True):

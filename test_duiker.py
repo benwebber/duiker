@@ -1,6 +1,9 @@
 from datetime import datetime as dt
+import os
+import pathlib
 import time
 
+import mock
 import pytest
 
 import duiker
@@ -70,3 +73,16 @@ def test_parse_history_line(line, histtimeformat, expected):
 def test_parse_history_line_failure(line, histtimeformat):
     with pytest.raises(ValueError):
         duiker.parse_history_line(line, histtimeformat)
+
+
+def test_xdg_data_home():
+    patched_envs = [
+        {},
+        {'XDG_DATA_HOME': ''},
+        {'XDG_DATA_HOME': os.path.expanduser('~/.local/share')},
+        {'XDG_DATA_HOME': '~/.local/share'}
+    ]
+    for env in patched_envs:
+        with mock.patch.dict(os.environ, env):
+            assert duiker.xdg_data_home() == pathlib.Path(os.path.expanduser('~/.local/share'))
+            assert duiker.xdg_data_home('duiker') == pathlib.Path(os.path.expanduser('~/.local/share/duiker'))

@@ -25,8 +25,21 @@ from typing import (
 
 __version__ = '0.1.0'
 
-XDG_DATA_HOME = os.environ.get('XDG_DATA_HOME', '~/.local/share')
-DUIKER_HOME = os.environ.get('DUIKER_HOME', pathlib.Path(XDG_DATA_HOME, 'duiker'))
+
+def xdg_data_home(name: Optional[str] = None) -> pathlib.Path:
+    """
+    Return the XDG Base Directory Specification data directory for a specific
+    application, or the base directory itself.
+    """
+    if os.environ.get('XDG_DATA_HOME'):
+        # not set or empty string
+        home = pathlib.Path(os.path.expanduser(os.environ.get('XDG_DATA_HOME')))
+    else:
+        home = pathlib.Path(os.path.expanduser('~/.local/share'))
+    return home / name if name else home
+
+
+DUIKER_HOME = xdg_data_home('duiker')
 DUIKER_DB = DUIKER_HOME.expanduser() / 'duiker.db'
 HISTTIMEFORMAT = os.environ.get('HISTTIMEFORMAT')
 

@@ -7,6 +7,7 @@ Automatically index your shell history in a full-text search database. Magic!
 import argparse
 from collections import namedtuple
 import datetime as dt
+from functools import wraps
 import logging
 import io
 import os
@@ -15,7 +16,12 @@ import sqlite3
 import sys
 import textwrap
 import time
-from typing import Tuple
+from typing import (
+    Any,
+    Callable,
+    Optional,
+    Tuple,
+)
 
 __version__ = '0.1.0'
 
@@ -102,16 +108,6 @@ class Duiker:
                 db.execute('INSERT INTO fts_history SELECT id, command FROM history WHERE rowid = last_insert_rowid()')
                 logger.info('Imported `%s` issued %s', command.command, render_timestamp(command.timestamp))
 
-    def _execute(self, query, params=None):
-        params = params if params else ()
-        with sqlite3.connect(self.db) as db:
-            db.row_factory = Command.from_row
-            yield from db.execute(query, params)
-
-    def log(self):
-        query = 'SELECT * FROM history ORDER BY timestamp ASC'
-        return self._execute(query)
-
     def stats(self):
         stats = {
             'Database': sizeof_human(pathlib.Path(self.db).stat().st_size),
@@ -132,24 +128,24 @@ class Duiker:
                 stats['Frequent Commands'].append(row)
         return stats
 
-    def search(self, expr):
-        fts = '''SELECT history.*
-                   FROM fts_history
-                   JOIN history
-                     ON fts_history.history_id = history.id
-                  WHERE fts_history MATCH ?;'''
-        return self._execute(fts, (expr,))
-
-    def head(self, num):
-        query = '''SELECT * FROM history ORDER BY timestamp ASC LIMIT ?'''
-        return self._execute(query, (num,))
-
-    def tail(self, num):
-        query = '''SELECT * FROM history ORDER BY timestamp DESC LIMIT ?'''
-        return self._execute(query, (num,))
-
     def shell(self, *args):
         os.execvp('sqlite3', ['sqlite3'] + list(args) + [self.db])
+
+
+def query(query: str, *defaults: Optional[Tuple], row_factory: Callable = Command.from_row) -> Callable[..., Any]:
+    """
+    Executes the given query and passes the cursor to the wrapped function.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            values = args if args else defaults
+            with sqlite3.connect(DUIKER_DB.as_posix()) as db:
+                db.row_factory = row_factory
+                rows = db.execute(query, values)
+                return func(rows, *values, **kwargs)
+        return wrapper
+    return decorator
 
 
 def parse_history_line(line, histtimeformat=None):
@@ -241,27 +237,31 @@ def handle_import(args):
         error(str(exc))
 
 
-def handle_search(args):
-    duiker = Duiker(DUIKER_DB.as_posix())
-    for command in duiker.search(args.expression):
+@query('''SELECT history.*
+           FROM fts_history
+           JOIN history
+             ON fts_history.history_id = history.id
+          WHERE fts_history MATCH ?''')
+def handle_search(commands, *params):
+    for command in commands:
         logger.info('{:tsv}'.format(command))
 
 
-def handle_log(args):
-    duiker = Duiker(DUIKER_DB.as_posix())
-    for command in duiker.log():
+@query('SELECT * FROM history ORDER BY timestamp ASC')
+def handle_log(commands, *params):
+    for command in commands:
         logger.info('{:tsv}'.format(command))
 
 
-def handle_head(args):
-    duiker = Duiker(DUIKER_DB.as_posix())
-    for command in duiker.head(args.entries):
+@query('SELECT * FROM history ORDER BY timestamp ASC LIMIT ?')
+def handle_head(commands, *params):
+    for command in commands:
         logger.info('{:tsv}'.format(command))
 
 
-def handle_tail(args):
-    duiker = Duiker(DUIKER_DB.as_posix())
-    for command in duiker.tail(args.entries):
+@query('SELECT * FROM history ORDER BY timestamp DESC LIMIT ?')
+def handle_tail(commands, *params):
+    for command in commands:
         logger.info('{:tsv}'.format(command))
 
 
@@ -336,10 +336,8 @@ Search for a command. Use any SQLite full-text search (FTS) query:
 '''.strip()
     )
     search.add_argument('expression')
-    search.set_defaults(func=handle_search)
 
     log = subparsers.add_parser('log', description='Show commands from all time.')
-    log.set_defaults(func=handle_log)
 
     magic = subparsers.add_parser(
         'magic',
@@ -372,11 +370,9 @@ Add this function to your $PROMPT_COMMAND:
 
     head = subparsers.add_parser('head', description='Show first N commands.')
     head.add_argument('-n', '--entries', help='recall first N commands [%(default)s]', default=10)
-    head.set_defaults(func=handle_head)
 
     tail = subparsers.add_parser('tail', description='Show last N commands.')
     tail.add_argument('-n', '--entries', help='recall last N commands [%(default)s]', default=10)
-    tail.set_defaults(func=handle_tail)
 
     shell = subparsers.add_parser(
         'sqlite3',
@@ -422,6 +418,15 @@ def main():
 
     try:
         args.func(args)
+    except AttributeError:
+        if args.command == 'search':
+            handle_search(args.expression)
+        elif args.command == 'log':
+            handle_log()
+        elif args.command == 'head':
+            handle_head(args.entries)
+        elif args.command == 'tail':
+            handle_tail(args.entries)
     except KeyboardInterrupt:
         sys.exit()
 

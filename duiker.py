@@ -36,11 +36,7 @@ def xdg_data_home(name: Optional[str] = None) -> pathlib.Path:
     Return the XDG Base Directory Specification data directory for a specific
     application, or the base directory itself.
     """
-    if os.environ.get('XDG_DATA_HOME'):
-        # not set or empty string
-        home = pathlib.Path(os.path.expanduser(os.environ.get('XDG_DATA_HOME')))
-    else:
-        home = pathlib.Path(os.path.expanduser('~/.local/share'))
+    home = pathlib.Path(os.path.expanduser(os.environ.get('XDG_DATA_HOME') or '~/.local/share'))
     return home / name if name else home
 
 

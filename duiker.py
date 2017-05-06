@@ -150,6 +150,13 @@ class Duiker:
         os.execvp('sqlite3', ['sqlite3'] + list(args) + [self.db])
 
 
+def _execute(conn: sqlite3.Connection, callback: Callable, query: str, values: Optional[Tuple] = (), row_factory: Optional[RowFactory] = None, **kwargs) -> Callable:
+    if row_factory:
+        conn.row_factory = row_factory
+    cursor = conn.execute(query, values)
+    return callback(cursor, *values, **kwargs)
+
+
 def query(db: Database, query: str, *defaults: Optional[Tuple], row_factory: RowFactory = Command.from_row) -> Callable[..., Any]:
     """
     Executes the given query and passes the cursor to the wrapped function.
@@ -157,20 +164,13 @@ def query(db: Database, query: str, *defaults: Optional[Tuple], row_factory: Row
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            def _execute(conn, query, values):
-                if row_factory:
-                    conn.row_factory = row_factory
-                cursor = conn.execute(query, values)
-                return func(cursor, *values, **kwargs)
-
             values = args if args else defaults
-
             if isinstance(db, sqlite3.Connection):
-                return _execute(db, query, values)
+                return _execute(db, func, query, values, row_factory=row_factory)
             elif isinstance(db, (pathlib.Path, str)):
                 addr = str(db)
                 with sqlite3.connect(addr) as conn:
-                    return _execute(conn, query, values)
+                    return _execute(conn, func, query, values, row_factory=row_factory)
             else:
                 raise TypeError("'db' must be {}".format(str(Database)))
         return wrapper

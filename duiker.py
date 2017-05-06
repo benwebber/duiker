@@ -21,9 +21,14 @@ from typing import (
     Callable,
     Optional,
     Tuple,
+    Union,
 )
 
 __version__ = '0.1.0'
+
+
+Database = Union[sqlite3.Connection, pathlib.Path, str]
+RowFactory = Callable[[sqlite3.Cursor, Tuple], Any]
 
 
 def xdg_data_home(name: Optional[str] = None) -> pathlib.Path:
@@ -145,18 +150,29 @@ class Duiker:
         os.execvp('sqlite3', ['sqlite3'] + list(args) + [self.db])
 
 
-def query(query: str, *defaults: Optional[Tuple], row_factory: Callable = Command.from_row) -> Callable[..., Any]:
+def query(db: Database, query: str, *defaults: Optional[Tuple], row_factory: RowFactory = Command.from_row) -> Callable[..., Any]:
     """
     Executes the given query and passes the cursor to the wrapped function.
     """
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            def _execute(conn, query, values):
+                if row_factory:
+                    conn.row_factory = row_factory
+                cursor = conn.execute(query, values)
+                return func(cursor, *values, **kwargs)
+
             values = args if args else defaults
-            with sqlite3.connect(DUIKER_DB.as_posix()) as db:
-                db.row_factory = row_factory
-                rows = db.execute(query, values)
-                return func(rows, *values, **kwargs)
+
+            if isinstance(db, sqlite3.Connection):
+                return _execute(db, query, values)
+            elif isinstance(db, (pathlib.Path, str)):
+                addr = str(db)
+                with sqlite3.connect(addr) as conn:
+                    return _execute(conn, query, values)
+            else:
+                raise TypeError("'db' must be {}".format(str(Database)))
         return wrapper
     return decorator
 
@@ -250,29 +266,29 @@ def handle_import(args):
         error(str(exc))
 
 
-@query('''SELECT history.*
-           FROM fts_history
-           JOIN history
-             ON fts_history.history_id = history.id
-          WHERE fts_history MATCH ?''')
+@query(DUIKER_DB, '''SELECT history.*
+                       FROM fts_history
+                       JOIN history
+                         ON fts_history.history_id = history.id
+                      WHERE fts_history MATCH ?''')
 def handle_search(commands, *params):
     for command in commands:
         logger.info('{:tsv}'.format(command))
 
 
-@query('SELECT * FROM history ORDER BY timestamp ASC')
+@query(DUIKER_DB, 'SELECT * FROM history ORDER BY timestamp ASC')
 def handle_log(commands, *params):
     for command in commands:
         logger.info('{:tsv}'.format(command))
 
 
-@query('SELECT * FROM history ORDER BY timestamp ASC LIMIT ?')
+@query(DUIKER_DB, 'SELECT * FROM history ORDER BY timestamp ASC LIMIT ?')
 def handle_head(commands, *params):
     for command in commands:
         logger.info('{:tsv}'.format(command))
 
 
-@query('SELECT * FROM history ORDER BY timestamp DESC LIMIT ?')
+@query(DUIKER_DB, 'SELECT * FROM history ORDER BY timestamp DESC LIMIT ?')
 def handle_tail(commands, *params):
     for command in commands:
         logger.info('{:tsv}'.format(command))

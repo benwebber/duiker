@@ -23,6 +23,13 @@ setuptools.setup(
 
     py_modules=['duiker'],
 
+    setup_requires=['pytest-runner'],
+    tests_require=[
+        'pytest',
+        'pytest-cov',
+        'pytest-helpers-namespace',
+    ],
+
     zip_safe=False,
 
     entry_points={

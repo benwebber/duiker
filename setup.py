@@ -10,6 +10,14 @@ if sys.version_info < (3, 5):
     sys.exit(1)
 
 
+tests_require = [
+    'mock',
+    'pytest',
+    'pytest-cov',
+    'pytest-helpers-namespace',
+]
+
+
 setuptools.setup(
     name='duiker',
     version='0.1.0',
@@ -22,13 +30,13 @@ setuptools.setup(
     author_email='benjamin.webber@gmail.com',
 
     py_modules=['duiker'],
+    package_dir={'': 'src'},
 
     setup_requires=['pytest-runner'],
-    tests_require=[
-        'pytest',
-        'pytest-cov',
-        'pytest-helpers-namespace',
-    ],
+    tests_require=tests_require,
+    extras = {
+        'test': tests_require,
+    },
 
     zip_safe=False,
 

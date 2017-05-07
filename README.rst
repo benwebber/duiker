@@ -25,7 +25,7 @@ Install from pip:
 
     pip install duiker
 
-Or, simply download the `single Python file <duiker.py>`__ and add it to
+Or, simply download the `single Python file <src/duiker.py>`__ and add it to
 your ``PATH``.
 
 Setup

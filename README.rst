@@ -1,6 +1,8 @@
 duiker
 ======
 
+|travis| |pypi| |pyversions|
+
 Automatically index your shell history in a full-text search database. Magic!
 
 Features
@@ -94,3 +96,10 @@ MIT
 
 .. [#] `<https://www.gnu.org/software/bash/manual/html_node/Controlling-the-Prompt.html#Controlling-the-Prompt>`_
 .. [#] `<https://sqlite.org/fts3.html#full_text_index_queries>`_
+
+.. |travis| image:: https://travis-ci.org/benwebber/curlrc.svg?branch=master
+    :target: https://travis-ci.org/benwebber/duiker
+.. |pypi| image:: https://img.shields.io/pypi/v/duiker.svg
+    :target: https://pypi.python.org/pypi/duiker/
+.. |pyversions| image:: https://img.shields.io/pypi/pyversions/duiker.svg
+    :target: https://www.python.org/doc/versions/

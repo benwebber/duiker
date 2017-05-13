@@ -306,7 +306,7 @@ def handle_version(args):
 def handle_stats(args):
     duiker = Duiker(DUIKER_DB.as_posix())
     for stat, value in duiker.stats().items():
-        if isinstance(value, list):
+        if isinstance(value, list) and len(value) > 0:
             max_freq = max(item[0] for item in value)
             padding = len(str(max_freq))
             print('{stat}:'.format(stat=stat))

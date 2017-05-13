@@ -135,7 +135,7 @@ class Duiker:
         with sqlite3.connect(self.db) as db:
             for stat, query in queries.items():
                 stats[stat] = db.execute(query).fetchone()[0]
-        query = 'SELECT COUNT(*) AS frequency, command FROM history GROUP BY command ORDER BY frequency DESC LIMIT 100;'
+        query = 'SELECT COUNT(*) AS frequency, command FROM history GROUP BY command HAVING COUNT(*) > 1 ORDER BY frequency DESC LIMIT 20;'
         stats['Frequent Commands'] = []
         with sqlite3.connect(self.db) as db:
             for row in db.execute(query):

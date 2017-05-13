@@ -380,7 +380,7 @@ Add this function to your $PROMPT_COMMAND:
         PS1="\\u@\\h:\\w$ "
     }}
 
-    PROMPT_COMMAND=__prompt
+    PROMPT_COMMAND='(__prompt $)'
 '''.format(magic=textwrap.indent(MAGIC, '    ').strip()).strip())
     magic.set_defaults(func=handle_magic)
 

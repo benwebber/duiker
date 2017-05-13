@@ -36,7 +36,7 @@ def xdg_data_home(name: Optional[str] = None) -> pathlib.Path:
     Return the XDG Base Directory Specification data directory for a specific
     application, or the base directory itself.
     """
-    home = pathlib.Path(os.path.expanduser(os.environ.get('XDG_DATA_HOME') or '~/.local/share'))
+    home = pathlib.Path(os.path.expanduser(os.environ.get('XDG_DATA_HOME') or os.path.expanduser('~') + '/.local/share'))
     return home / name if name else home
 
 
@@ -135,7 +135,7 @@ class Duiker:
         with sqlite3.connect(self.db) as db:
             for stat, query in queries.items():
                 stats[stat] = db.execute(query).fetchone()[0]
-        query = 'SELECT COUNT(*) AS frequency, command FROM history GROUP BY command ORDER BY frequency DESC LIMIT 100;'
+        query = 'SELECT COUNT(*) AS frequency, command FROM history GROUP BY command HAVING COUNT(*) > 1 ORDER BY frequency DESC LIMIT 20;'
         stats['Frequent Commands'] = []
         with sqlite3.connect(self.db) as db:
             for row in db.execute(query):
@@ -306,7 +306,7 @@ def handle_version(args):
 def handle_stats(args):
     duiker = Duiker(DUIKER_DB.as_posix())
     for stat, value in duiker.stats().items():
-        if isinstance(value, list):
+        if isinstance(value, list) and len(value) > 0:
             max_freq = max(item[0] for item in value)
             padding = len(str(max_freq))
             print('{stat}:'.format(stat=stat))
@@ -380,7 +380,7 @@ Add this function to your $PROMPT_COMMAND:
         PS1="\\u@\\h:\\w$ "
     }}
 
-    PROMPT_COMMAND=__prompt
+    PROMPT_COMMAND='(__prompt $)'
 '''.format(magic=textwrap.indent(MAGIC, '    ').strip()).strip())
     magic.set_defaults(func=handle_magic)
 

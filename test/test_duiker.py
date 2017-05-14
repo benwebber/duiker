@@ -1,6 +1,5 @@
 import os
 import pathlib
-import sqlite3
 
 import mock
 import pytest
@@ -42,38 +41,6 @@ def test_sizeof_human_decimal(size, expected):
 
 
 @pytest.fixture
-def millenium():
-    from datetime import datetime as dt
-    return dt.strptime('2001-01-01 00:00:00', '%Y-%m-%d %H:%M:%S')
-
-
-@pytest.fixture
-def millenium_unix():
-    import time
-    return time.mktime(millenium().timetuple())
-
-
-@pytest.mark.parametrize('line,histtimeformat,expected', [
-    ('  1  help history', None, duiker.Command(None, None, 'help history')),
-    ('100  help history', None, duiker.Command(None, None, 'help history')),
-    ('  1  2001-01-01 00:00:00 help history', '%Y-%m-%d %H:%M:%S ', duiker.Command(None, millenium_unix(), 'help history')),
-    ('100  2001-01-01 00:00:00 help history', '%Y-%m-%d %H:%M:%S ', duiker.Command(None, millenium_unix(), 'help history')),
-    ('  1  2001-01-01 00:00:00 help history', '%Y-%m-%d %H:%M:%S', duiker.Command(None, millenium_unix(), 'help history')),
-    ('100  2001-01-01 00:00:00 help history', '%Y-%m-%d %H:%M:%S', duiker.Command(None, millenium_unix(), 'help history')),
-])
-def test_parse_history_line(line, histtimeformat, expected):
-    assert duiker.parse_history_line(line, histtimeformat) == expected
-
-
-@pytest.mark.parametrize('line,histtimeformat', [
-    ('  1  2001-01-01 00:00:00 help history', '%%'),
-    ('100  2001-01-01 00:00:00 help history', '%%'),
-])
-def test_parse_history_line_failure(line, histtimeformat):
-    with pytest.raises(ValueError):
-        duiker.parse_history_line(line, histtimeformat)
-
-
 def test_xdg_data_home():
     patched_envs = [
         {},
@@ -85,23 +52,3 @@ def test_xdg_data_home():
         with mock.patch.dict(os.environ, env):
             assert duiker.xdg_data_home() == pathlib.Path(os.path.expanduser('~/.local/share'))
             assert duiker.xdg_data_home('duiker') == pathlib.Path(os.path.expanduser('~/.local/share/duiker'))
-
-
-@pytest.mark.parametrize('database', [':memory:', ':tempfile:'], indirect=True)
-@pytest.mark.parametrize('row_factory', [None, sqlite3.Row])
-def test_query(database, row_factory):
-    with database:
-        database.row_factory = row_factory
-        points = list(database.execute('SELECT * FROM points'))
-
-    def callback(rows, *args, **kwargs):
-        assert list(rows) == points
-
-    path = pytest.helpers.get_database_path(database) or database
-
-    duiker.query(path, 'SELECT * FROM points', row_factory=row_factory)(callback)()
-
-
-def test_query_invalid_database():
-    with pytest.raises(TypeError):
-        duiker.query(None, 'SELECT * FROM points', row_factory=None)(None)()

@@ -5,9 +5,7 @@ Automatically index your shell history in a full-text search database. Magic!
 """
 
 import argparse
-from collections import namedtuple
 import datetime as dt
-from functools import wraps
 import logging
 import io
 import os
@@ -16,21 +14,18 @@ import sqlite3
 import sys
 import textwrap
 import time
-from typing import (
-    Any,
-    Callable,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import Optional
 
 from . import db
+from .parser import (
+    Command,
+    ParseError,
+    parse_history_line,
+    render_timestamp,
+    strptime_prefix,
+)
 
 __version__ = '0.1.0'
-
-
-Database = Union[sqlite3.Connection, pathlib.Path, str]
-RowFactory = Callable[[sqlite3.Cursor, Tuple], Any]
 
 
 def xdg_data_home(name: Optional[str] = None) -> pathlib.Path:
@@ -62,27 +57,11 @@ stderr = logging.StreamHandler(sys.stderr)
 logger.addHandler(stderr)
 
 
-class ParseError(Exception):
-    pass
-
-
 class PrefixWrapper(textwrap.TextWrapper):
     def __init__(self, prefix, *args, **kwargs):
         super().__init__(*args, initial_indent=prefix, subsequent_indent=prefix,
                          break_long_words=False, break_on_hyphens=False,
                          **kwargs)
-
-
-class Command(namedtuple('Command', ('id', 'timestamp', 'command'))):
-    @classmethod
-    def from_row(cls, cursor, row):
-        return Command(*row)
-
-    def __format__(self, fmt):
-        if fmt == 'tsv':
-            timestamp = render_timestamp(self.timestamp)
-            return '{timestamp}\t{self.command}'.format(timestamp=timestamp, self=self)
-        return repr(self)
 
 
 class Duiker:
@@ -131,90 +110,6 @@ class Duiker:
         os.execvp('sqlite3', ['sqlite3'] + list(args) + [self.db])
 
 
-def _execute(conn: sqlite3.Connection, callback: Callable, query: str, values: Optional[Tuple] = (), row_factory: Optional[RowFactory] = None, **kwargs) -> Callable:
-    if row_factory:
-        conn.row_factory = row_factory
-    cursor = conn.execute(query, values)
-    return callback(cursor, *values, **kwargs)
-
-
-def query(db: Database, query: str, *defaults: Optional[Tuple], row_factory: RowFactory = Command.from_row) -> Callable[..., Any]:
-    """
-    Executes the given query and passes the cursor to the wrapped function.
-    """
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            values = args if args else defaults
-            if isinstance(db, sqlite3.Connection):
-                return _execute(db, func, query, values, row_factory=row_factory)
-            elif isinstance(db, (pathlib.Path, str)):
-                addr = str(db)
-                with sqlite3.connect(addr) as conn:
-                    return _execute(conn, func, query, values, row_factory=row_factory)
-            else:
-                raise TypeError("'db' must be {}".format(str(Database)))
-        return wrapper
-    return decorator
-
-
-def parse_history_line(line, histtimeformat=None):
-    """
-    Extract the timestamp and command from a line of `history` output.
-    """
-    # Split line ID and timestamp/command (remainder).
-    _, remainder = line.split(None, 1)
-    remainder = remainder.rstrip()
-    if histtimeformat:
-        timestamp, command = strptime_prefix(remainder, histtimeformat)
-        command = command.strip()
-        timestamp = time.mktime(timestamp.timetuple())
-    else:
-        command = remainder
-        timestamp = None
-    return Command(None, timestamp, command)
-
-
-def strptime_prefix(text: str, fmt: str) -> Tuple[dt.datetime, str]:
-    """
-    Partially parse a string beginning with a datetime representation.
-
-    Returns the datetime and the rest of the string ("unconverted data").
-
-    >>> strptime_prefix('1970-01-01 hello world', '%Y-%m-%d')
-    (datetime.datetime(1970, 1, 1, 0, 0), ' hello world')
-
-    >>> strptime_prefix('hello world', '%Y-%m-%d')
-    Traceback (most recent call last):
-    ...
-    ValueError: time data 'hello world' does not match format '%Y-%m-%d'
-
-    >>> strptime_prefix('hello world 1970-01-01', '%Y-%m-%d')
-    Traceback (most recent call last):
-    ...
-    ValueError: time data 'hello world 1970-01-01' does not match format '%Y-%m-%d'
-    """
-    # datetime.strptime() raises ValueError if the string does not exactly
-    # match the format string.
-    try:
-        # Dummy test: we need to inspect the ValueError.
-        dt.datetime.strptime(text, fmt)
-    except ValueError as exc:
-        # Extract the command from the ValueError error message and re-parse
-        # the timestamp. This feels quite fragile, but this error message
-        # hasn't changed since 2.3:
-        #
-        # <https://github.com/python/cpython/blame/v3.6.1/Lib/_strptime.py#L363-L365>
-        message = exc.args[0]
-        if 'unconverted data remains: ' in message:
-            remainder = exc.args[0].replace('unconverted data remains: ', '')
-            timestamp = text.replace(remainder, '')
-            return dt.datetime.strptime(timestamp, fmt), remainder
-        else:
-            # Raised another sort of ValueError.
-            raise
-
-
 def sizeof_human(size, binary=True):
     """
     Render human-readable file sizes.
@@ -234,11 +129,6 @@ def sizeof_human(size, binary=True):
     return '{size:.1f} {prefix}B'.format(size=size, prefix=prefixes[-1])
 
 
-def render_timestamp(timestamp):
-    fmt = os.environ.get('HISTTIMEFORMAT')
-    return dt.datetime.fromtimestamp(timestamp).strftime(fmt) if fmt else timestamp
-
-
 def handle_import(args):
     duiker = Duiker(DUIKER_DB.as_posix())
     try:
@@ -247,29 +137,29 @@ def handle_import(args):
         error(str(exc))
 
 
-@query(DUIKER_DB, '''SELECT history.*
-                       FROM fts_history
-                       JOIN history
-                         ON fts_history.history_id = history.id
-                      WHERE fts_history MATCH ?''')
+@db.query(DUIKER_DB, '''SELECT history.*
+                          FROM fts_history
+                          JOIN history
+                            ON fts_history.history_id = history.id
+                         WHERE fts_history MATCH ?''')
 def handle_search(commands, *params):
     for command in commands:
         print('{:tsv}'.format(command))
 
 
-@query(DUIKER_DB, 'SELECT * FROM history ORDER BY timestamp ASC')
+@db.query(DUIKER_DB, 'SELECT * FROM history ORDER BY timestamp ASC')
 def handle_log(commands, *params):
     for command in commands:
         print('{:tsv}'.format(command))
 
 
-@query(DUIKER_DB, 'SELECT * FROM history ORDER BY timestamp ASC LIMIT ?')
+@db.query(DUIKER_DB, 'SELECT * FROM history ORDER BY timestamp ASC LIMIT ?')
 def handle_head(commands, *params):
     for command in commands:
         print('{:tsv}'.format(command))
 
 
-@query(DUIKER_DB, 'SELECT * FROM history ORDER BY timestamp DESC LIMIT ?')
+@db.query(DUIKER_DB, 'SELECT * FROM history ORDER BY timestamp DESC LIMIT ?')
 def handle_tail(commands, *params):
     for command in commands:
         print('{:tsv}'.format(command))

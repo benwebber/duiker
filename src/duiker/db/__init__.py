@@ -1,8 +1,22 @@
+from functools import wraps
 import importlib
+import pathlib
 import pkgutil
 import sqlite3
+from typing import (
+    Any,
+    Callable,
+    Optional,
+    Tuple,
+    Union,
+)
 
 from .. import dag
+from ..types import (
+    Database,
+    RowFactory,
+)
+from ..parser import Command
 
 
 class MigrationError(Exception):
@@ -105,3 +119,30 @@ def get_migration(name):
 def sort_migrations():
     graph = MigrationGraph(iter_migrations())
     return graph.sort()
+
+
+def _execute(conn: sqlite3.Connection, callback: Callable, query: str, values: Optional[Tuple] = (), row_factory: Optional[RowFactory] = None, **kwargs) -> Callable:
+    if row_factory:
+        conn.row_factory = row_factory
+    cursor = conn.execute(query, values)
+    return callback(cursor, *values, **kwargs)
+
+
+def query(db: Database, query: str, *defaults: Optional[Tuple], row_factory: RowFactory = Command.from_row) -> Callable[..., Any]:
+    """
+    Executes the given query and passes the cursor to the wrapped function.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            values = args if args else defaults
+            if isinstance(db, sqlite3.Connection):
+                return _execute(db, func, query, values, row_factory=row_factory)
+            elif isinstance(db, (pathlib.Path, str)):
+                addr = str(db)
+                with sqlite3.connect(addr) as conn:
+                    return _execute(conn, func, query, values, row_factory=row_factory)
+            else:
+                raise TypeError("'db' must be {}".format(str(Database)))
+        return wrapper
+    return decorator

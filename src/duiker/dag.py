@@ -1,11 +1,10 @@
-import enum
 import collections
+import copy
+import enum
 from collections.abc import (
     Sequence,
     Set,
 )
-import copy
-
 
 __all__ = ['DAG', 'tsort']
 

@@ -1,7 +1,7 @@
-from collections import namedtuple
 import datetime as dt
 import os
 import time
+from collections import namedtuple
 from typing import Tuple
 
 

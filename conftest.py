@@ -3,7 +3,6 @@ import sqlite3
 
 import pytest
 
-
 pytest_plugins = ['helpers_namespace']
 
 

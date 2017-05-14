@@ -25,9 +25,10 @@ help:
 
 clean:
 	$(RM) -r build dist
-	find . -name '*.pyc' -delete
-	find . -name '*.egg-info' -exec $(RM) -r {} +
 	find . -name '*.egg' -delete
+	find . -name '*.egg-info' -delete
+	find . -name '*.pyc' -delete
+	find . -name '__pycache__' -delete
 
 dist: sdist wheel
 

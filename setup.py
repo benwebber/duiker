@@ -29,7 +29,7 @@ setuptools.setup(
     author='Ben Webber',
     author_email='benjamin.webber@gmail.com',
 
-    py_modules=['duiker'],
+    packages=setuptools.find_packages('src'),
     package_dir={'': 'src'},
 
     setup_requires=['pytest-runner'],

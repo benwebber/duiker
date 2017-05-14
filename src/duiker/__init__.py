@@ -24,6 +24,8 @@ from typing import (
     Union,
 )
 
+from . import db
+
 __version__ = '0.1.0'
 
 
@@ -85,28 +87,11 @@ class Command(namedtuple('Command', ('id', 'timestamp', 'command'))):
 
 class Duiker:
 
-    SCHEMA = """
-    CREATE TABLE IF NOT EXISTS history (
-        id        INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp INTEGER NOT NULL,
-        command   TEXT NOT NULL,
-                  UNIQUE (timestamp, command) ON CONFLICT REPLACE
-    );
-
-    CREATE VIRTUAL TABLE IF NOT EXISTS fts_history USING fts4(history_id, command);
-
-    CREATE VIRTUAL TABLE IF NOT EXISTS fts_history_terms USING fts4aux(fts_history);
-    """
-    SCHEMA_VERSION = 1
-
     def __init__(self, db, create=True):
         self.db = db
 
         if create:
             DUIKER_HOME.mkdir(mode=0o700, parents=True, exist_ok=True)
-            with sqlite3.connect(self.db) as db:
-                db.executescript(self.SCHEMA)
-                db.execute('PRAGMA user_version = {}'.format(self.SCHEMA_VERSION))
 
     def import_file(self, histfile):
         histtimeformat = os.environ.get('HISTTIMEFORMAT')
@@ -424,6 +409,17 @@ def hint(message):
 
 def main():
     args = parse_args(sys.argv[1:])
+
+    migrator = db.Migrator(str(DUIKER_DB))
+    applied_migrations = set(migrator.applied_migrations)
+    if not applied_migrations:
+        migrator.user_version = 0
+    migrations = db.sort_migrations()
+    for migration in migrations:
+        if migration not in applied_migrations:
+            migration_module = db.get_migration(migration)
+            logger.info('Applying migration: {}'.format(migration_module.__doc__.strip()))
+            migrator.apply(migration_module)
 
     if args.command == 'import':
         if args.quiet:

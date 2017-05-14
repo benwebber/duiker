@@ -55,9 +55,9 @@ __duiker_import() {
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-stdout = logging.StreamHandler(sys.stdout)
+stderr = logging.StreamHandler(sys.stderr)
 
-logger.addHandler(stdout)
+logger.addHandler(stderr)
 
 
 class ParseError(Exception):
@@ -269,25 +269,25 @@ def handle_import(args):
                       WHERE fts_history MATCH ?''')
 def handle_search(commands, *params):
     for command in commands:
-        logger.info('{:tsv}'.format(command))
+        print('{:tsv}'.format(command))
 
 
 @query(DUIKER_DB, 'SELECT * FROM history ORDER BY timestamp ASC')
 def handle_log(commands, *params):
     for command in commands:
-        logger.info('{:tsv}'.format(command))
+        print('{:tsv}'.format(command))
 
 
 @query(DUIKER_DB, 'SELECT * FROM history ORDER BY timestamp ASC LIMIT ?')
 def handle_head(commands, *params):
     for command in commands:
-        logger.info('{:tsv}'.format(command))
+        print('{:tsv}'.format(command))
 
 
 @query(DUIKER_DB, 'SELECT * FROM history ORDER BY timestamp DESC LIMIT ?')
 def handle_tail(commands, *params):
     for command in commands:
-        logger.info('{:tsv}'.format(command))
+        print('{:tsv}'.format(command))
 
 
 def handle_shell(args):

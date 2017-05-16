@@ -194,7 +194,7 @@ def handle_stats(args):
 
 def parse_args(argv):
     parser = argparse.ArgumentParser(description=__doc__)
-    subparsers = parser.add_subparsers(dest='command')
+    subparsers = parser.add_subparsers(title='commands', dest='command', metavar='')
     # Python 3.3 introduced a regression that makes subparsers optional:
     # <http://bugs.python.org/issue9253>
     subparsers.required = True
@@ -202,8 +202,9 @@ def parse_args(argv):
     import_ = subparsers.add_parser(
         'import',
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        help='Import Bash history output into database.',
         description='''
-Import Bash history file into Duiker.
+Import Bash history output into Duiker.
 
 Import from standard input:
 
@@ -229,6 +230,7 @@ Import from history output:
     search = subparsers.add_parser(
         'search',
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        help='Search for a command in the history database.',
         description='''
 Search for a command. Use any SQLite full-text search (FTS) query:
 
@@ -237,11 +239,12 @@ Search for a command. Use any SQLite full-text search (FTS) query:
     )
     search.add_argument('expression')
 
-    log = subparsers.add_parser('log', description='Show commands from all time.')
+    log = subparsers.add_parser('log', help='Show commands from all time.', description='Show commands from all time.')
 
     magic = subparsers.add_parser(
         'magic',
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        help='Print shell snippet that imports last command.',
         description='''
 Print shell function that imports last command into Duiker.
 
@@ -261,22 +264,24 @@ Add this function to your $PROMPT_COMMAND:
 
     stats = subparsers.add_parser(
         'stats',
+        help='Print stats for the history database.',
         description='Print stats for the history database.',
     )
     stats.set_defaults(func=handle_stats)
 
-    version = subparsers.add_parser('version', description='Show version and exit.')
+    version = subparsers.add_parser('version', help='Show version and exit.', description='Show version and exit.')
     version.set_defaults(func=handle_version)
 
-    head = subparsers.add_parser('head', description='Show first N commands.')
+    head = subparsers.add_parser('head', help='Show first N commands.', description='Show first N commands.')
     head.add_argument('-n', '--entries', help='recall first N commands [%(default)s]', default=10)
 
-    tail = subparsers.add_parser('tail', description='Show last N commands.')
+    tail = subparsers.add_parser('tail', help='Show last N commands.', description='Show last N commands.')
     tail.add_argument('-n', '--entries', help='recall last N commands [%(default)s]', default=10)
 
     shell = subparsers.add_parser(
         'sqlite3',
         aliases=['sql', 'shell'],
+        help='Open the database in the SQLite3 shell.',
         description='Open the database in the SQLite3 shell.',
     )
     shell.add_argument(

@@ -175,7 +175,13 @@ def handle_magic(args):
 
 
 def handle_version(args):
-    print('duiker {}'.format(__version__))
+    if args.verbose:
+        migrator = db.Migrator(str(DUIKER_DB))
+        print('duiker {} (schema version {})'.format(__version__, migrator.user_version))
+        print('SQLite3 {}'.format(sqlite3.sqlite_version))
+        print('pysqlite {}'.format(sqlite3.version))
+    else:
+        print('duiker {}'.format(__version__))
 
 
 def handle_stats(args):
@@ -270,6 +276,7 @@ Add this function to your $PROMPT_COMMAND:
     stats.set_defaults(func=handle_stats)
 
     version = subparsers.add_parser('version', help='Show version and exit.', description='Show version and exit.')
+    version.add_argument('-v', '--verbose', action='store_true', help='Print extra version information.')
     version.set_defaults(func=handle_version)
 
     head = subparsers.add_parser('head', help='Show first N commands.', description='Show first N commands.')

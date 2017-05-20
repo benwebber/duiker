@@ -3,7 +3,7 @@ import pathlib
 from typing import Optional
 
 
-__all__ = ['DUIKER_HOME', 'DUIKER_DB', 'HISTTIMEFORMAT']
+__all__ = ['DUIKER_HOME', 'DUIKER_DB', 'HISTTIMEFORMAT', 'MAGIC']
 
 
 def xdg_data_home(name: Optional[str] = None) -> pathlib.Path:
@@ -18,3 +18,10 @@ def xdg_data_home(name: Optional[str] = None) -> pathlib.Path:
 DUIKER_HOME = xdg_data_home('duiker')
 DUIKER_DB = DUIKER_HOME.expanduser() / 'duiker.db'
 HISTTIMEFORMAT = os.environ.get('HISTTIMEFORMAT')
+MAGIC = '''
+__duiker_import() {
+    local old_histignore=$HISTIGNORE
+    HISTIGNORE='history*'
+    history 1 | duiker import --quiet -
+    HISTIGNORE=$old_histignore
+}'''.strip()

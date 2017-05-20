@@ -32,6 +32,7 @@ setuptools.setup(
     packages=setuptools.find_packages('src'),
     package_dir={'': 'src'},
 
+    install_requires=['click==6.6'],
     setup_requires=['pytest-runner'],
     tests_require=tests_require,
     extras = {
@@ -42,7 +43,7 @@ setuptools.setup(
 
     entry_points={
         'console_scripts': [
-            'duiker = duiker:main',
+            'duiker = duiker.cli:cli',
         ],
     },
 

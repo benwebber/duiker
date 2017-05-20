@@ -17,6 +17,7 @@ import time
 from typing import Optional
 
 from . import db
+from .config import *
 from .parser import (
     Command,
     ParseError,
@@ -27,19 +28,6 @@ from .parser import (
 
 __version__ = '0.1.0'
 
-
-def xdg_data_home(name: Optional[str] = None) -> pathlib.Path:
-    """
-    Return the XDG Base Directory Specification data directory for a specific
-    application, or the base directory itself.
-    """
-    home = pathlib.Path(os.path.expanduser(os.environ.get('XDG_DATA_HOME') or '~/.local/share'))
-    return home / name if name else home
-
-
-DUIKER_HOME = xdg_data_home('duiker')
-DUIKER_DB = DUIKER_HOME.expanduser() / 'duiker.db'
-HISTTIMEFORMAT = os.environ.get('HISTTIMEFORMAT')
 
 MAGIC = '''
 __duiker_import() {
@@ -73,11 +61,10 @@ class Duiker:
             DUIKER_HOME.mkdir(mode=0o700, parents=True, exist_ok=True)
 
     def import_file(self, histfile):
-        histtimeformat = os.environ.get('HISTTIMEFORMAT')
         with sqlite3.connect(self.db) as db:
             for line in histfile:
                 try:
-                    command = parse_history_line(line, histtimeformat)
+                    command = parse_history_line(line, HISTTIMEFORMAT)
                 except Exception as exc:
                     raise ParseError(exc)
                 if command.timestamp is None:

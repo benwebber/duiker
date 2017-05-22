@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+TIMESTAMP="$(git log -1 --format='%at')"
+
+pip download --dest build/pyz .
+
+(
+  cd build/pyz
+  find . -name '*.whl' -exec unzip {} \;
+  find . -name '*.tar.gz' -exec tar -xzvf {} \;
+  rm -rf ./*.whl ./*.tar.gz ./*.dist-info
+)
+
+cp -r src/* build/pyz/
+
+mkdir -p "$(dirname "${1}")"
+
+# Build reproducible zipapp.
+#
+#   1. Set mtime of all packaged files to something reproducible (timestamp of
+#      last commit).
+#   2. Package __main__.py instead of letting zipapp module write one for the
+#      same reason.
+#
+find build/pyz/ -print0 |
+  xargs -0 touch --no-dereference --date="@${TIMESTAMP}"
+python3 -m zipapp -o "${1}" -p '/usr/bin/env python3' build/pyz/

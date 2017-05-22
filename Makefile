@@ -3,6 +3,7 @@
 	dist \
 	help \
 	install \
+	pyz \
 	release \
 	sdist \
 	wheel
@@ -25,15 +26,19 @@ help:
 
 clean:
 	$(RM) -r build dist
+	-find . -name '*.egg-info' -execdir rm -rf {} \;
+	-find . -name '__pycache__' -execdir rm -rf {} \;
 	find . -name '*.egg' -delete
-	find . -name '*.egg-info' -delete
 	find . -name '*.pyc' -delete
-	find . -name '__pycache__' -delete
 
-dist: sdist wheel
+dist: sdist wheel pyz
 
 install:
 	python setup.py install
+
+pyz: clean
+	-find . -name '*.egg-info' -execdir rm -rf {} \;
+	./script/mkpyz dist/duiker
 
 release: dist
 	twine upload dist/*.whl dist/*.tar.gz

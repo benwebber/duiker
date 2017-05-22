@@ -48,7 +48,7 @@ def cli(ctx):
     migrator = db.Migrator(DUIKER_DB)
     applied_migrations = set(migrator.applied_migrations)
     if not applied_migrations:
-        migrator.user_version = 0
+        migrator.database.user_version = 0
     migrations = db.sort_migrations()
     for migration in migrations:
         if migration not in applied_migrations:

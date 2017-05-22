@@ -39,7 +39,33 @@ def hint(message):
     print('\n'.join(PrefixWrapper('hint: ').wrap(message)), file=sys.stderr)
 
 
-@click.group('duiker')
+class AliasedGroup(click.Group):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._aliases = {}
+
+    def command(self, *args, **kwargs):
+        aliases = kwargs.pop('aliases', [])
+        def decorator(func):
+            cmd = click.decorators.command(*args, **kwargs)(func)
+            self.add_command(cmd, aliases=aliases)
+            return cmd
+        return decorator
+
+    def add_command(self, cmd, name=None, aliases=None):
+        super().add_command(cmd, name)
+        if aliases:
+            for alias in aliases:
+                self._aliases[alias] = name or cmd.name
+
+    def get_command(self, ctx, cmd_name):
+        command = super().get_command(ctx, cmd_name)
+        if command is None:
+            command = super().get_command(ctx, self._aliases.get(cmd_name))
+        return command
+
+
+@click.group('duiker', cls=AliasedGroup)
 @click.pass_context
 def cli(ctx):
     DUIKER_HOME.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -158,8 +184,7 @@ def search(ctx, expression):
             print('{:tsv}'.format(command))
 
 
-# sql, shell
-@cli.command('sqlite3')
+@cli.command('sqlite3', aliases=['sql', 'shell'])
 @click.argument('sqlite3_options', nargs=-1, type=click.UNPROCESSED)
 @click.pass_context
 def shell(ctx, sqlite3_options):

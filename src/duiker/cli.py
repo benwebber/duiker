@@ -228,15 +228,14 @@ def version(ctx, verbose):
     """
     Show version and exit.
     """
-    import pkg_resources
-    version = pkg_resources.require('duiker')[0].version
+    from . import __version__
     if verbose:
         database = db.DAO(DUIKER_DB)
-        print('duiker {} (schema version {})'.format(version, database.user_version))
+        print('duiker {} (schema version {})'.format(__version__, database.user_version))
         print('SQLite3 {}'.format(sqlite3.sqlite_version))
         print('pysqlite {}'.format(sqlite3.version))
     else:
-        print('duiker {}'.format(version))
+        print('duiker {}'.format(__version__))
 
 
 def sizeof_human(size, binary=True):

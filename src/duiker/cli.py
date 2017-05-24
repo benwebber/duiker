@@ -153,7 +153,22 @@ def log(ctx):
             print('{:tsv}'.format(command))
 
 
-@cli.command()
+@cli.command(epilog="""Example:
+
+    \b
+{}
+
+    \b
+__prompt() {{
+  history -a
+  __duiker_import
+  PS1="\\u@\\h:\\w$ "
+}}
+
+    \b
+PROMPT_COMMAND=__prompt
+    \b
+""".format(MAGIC))
 @click.pass_context
 def magic(ctx):
     """

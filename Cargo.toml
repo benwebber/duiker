@@ -1,0 +1,14 @@
+[package]
+name = "duiker"
+version = "1.0.0"
+authors = ["Ben Webber"]
+
+[dependencies]
+chrono = "0.3.1"
+clap = {version = "2.24.2", features = ["yaml"]}
+diesel = { version = "0.13.0", features = ["chrono", "sqlite"] }
+diesel_codegen = { version = "0.13.0", features = ["sqlite"] }
+lazy_static = "0.2.8"
+libsqlite3-sys = { version = "0.8.0", features = ["bundled"] }
+regex = "0.2"
+xdg = "2.1.0"

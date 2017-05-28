@@ -1,50 +1,19 @@
 .PHONY: all \
 	clean \
-	dist \
-	help \
+    debug \
 	install \
-	pyz \
-	release \
-	sdist \
-	wheel
+	setup
 
-define USAGE
-Targets:
-
-  clean       remove build artifacts
-  dist        build source distribution and wheel
-  install     install package to active Python site packages
-  release     build and upload package to PyPI
-  sdist       build source distribution
-  wheel       build wheel
-endef
-
-all: clean dist
-
-help:
-	@echo $(info $(USAGE))
+all: debug
 
 clean:
-	$(RM) -r build dist
-	-find . -name '*.egg-info' -execdir rm -rf {} \;
-	-find . -name '__pycache__' -execdir rm -rf {} \;
-	find . -name '*.egg' -delete
-	find . -name '*.pyc' -delete
+	cargo clean
 
-dist: sdist wheel pyz
+debug:
+	CFLAGS=-DSQLITE-DISABLE_INTRINSIC=1 cargo build
 
 install:
-	python setup.py install
+	cargo install --path .
 
-pyz: clean
-	-find . -name '*.egg-info' -execdir rm -rf {} \;
-	./script/mkpyz dist/duiker
-
-release: dist
-	twine upload dist/*.whl dist/*.tar.gz
-
-sdist: clean
-	python setup.py sdist
-
-wheel: clean
-	python setup.py bdist_wheel
+setup:
+	cargo install --no-default-features --features sqlite diesel_cli

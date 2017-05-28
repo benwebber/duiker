@@ -1,0 +1,59 @@
+name: duiker
+version: '1.0.0'
+about: Automatically index your shell history in a full-text search database. Magic!
+settings:
+  - SubcommandRequiredElseHelp
+  - VersionlessSubcommands
+subcommands:
+    - head:
+        about: Show first N commands.
+        args:
+          - entries:
+              short: n
+              help: recall first N commands
+              default_value: '10'
+    - import:
+        about: Import Bash history output into database.
+        args:
+          - quiet:
+              short: q
+              long: quiet
+              help: do not print imported commands
+          - input:
+              index: 1
+              required: true
+    - log:
+        about: Show commands from all time.
+    - magic:
+        about: Print shell function that imports last command.
+    - search:
+        about: Search for a command in the history database.
+        args:
+            - expression:
+                index: 1
+                required: true
+    - sqlite3:
+        about: Open the database in the SQLite3 shell.
+        aliases:
+          - sql
+          - shell
+        settings:
+          - TrailingVarArg
+        args:
+          - sqlite3_options:
+              multiple: true
+    - stats:
+        about: Print stats for the history database.
+    - tail:
+        about: Show last N commands.
+        args:
+            - entries:
+                short: n
+                help: recall last N commands
+                default_value: '10'
+    - version:
+        about: Print version and exit.
+        args:
+          - verbose:
+              short: v
+              long: verbose 

@@ -9,6 +9,7 @@ extern crate libsqlite3_sys;
 extern crate regex;
 extern crate xdg;
 
+use chrono::{UTC, TimeZone};
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
 use clap::App;
@@ -19,6 +20,7 @@ mod models;
 mod schema;
 mod types;
 
+use std::env;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
@@ -34,12 +36,38 @@ pub fn establish_connection() -> SqliteConnection {
 }
 
 
+fn output_command(command: &models::History) {
+    lazy_static! {
+        static ref HISTTIMEFORMAT: Option<String> = match env::var("HISTTIMEFORMAT") {
+            Ok(fmt) => Some(String::from(fmt.trim())),
+            Err(_) => None
+        };
+    };
+    match *HISTTIMEFORMAT {
+        Some(ref fmt) => {
+            let timestamp = UTC.timestamp(command.timestamp as i64, 0);
+            println!("{}\t{}", timestamp.format(fmt), command.command);
+        },
+        None => println!("{}\t{}", command.timestamp, command.command)
+    }
+}
+
+
+pub fn output_commands(commands: &Vec<models::History>) {
+    for command in commands {
+        output_command(&command);
+    }
+}
+
+
 pub fn dispatch_command(matches: clap::ArgMatches) {
     let connection = establish_connection();
     match matches.subcommand() {
         ("head", Some(m)) => {
             let entries = value_t!(m, "entries", i64).unwrap();
-            commands::head(&connection, entries);
+            if let Ok(commands) = commands::head(&connection, entries) {
+                output_commands(&commands);
+            };
         }
         ("import", Some(m)) => {
             let stdin = io::stdin();
@@ -52,20 +80,32 @@ pub fn dispatch_command(matches: clap::ArgMatches) {
             if m.is_present("quiet") {
                 quiet = true;
             }
-            match commands::import(&connection, reader, quiet) {
-                Ok(n) => println!("imported {} commands", n),
-                Err(why) => println!("{}", why),
+            match commands::import(&connection, reader) {
+                Ok(n) => {
+                    if ! quiet {
+                        println!("imported {} commands", n);
+                    }
+                }
+                Err(why) => {
+                    if ! quiet {
+                        println!("{}", why);
+                    }
+                }
             };
         }
         ("log", Some(_)) => {
-            commands::log(&connection);
+            if let Ok(commands) = commands::log(&connection) {
+                output_commands(&commands);
+            };
         }
         ("magic", Some(_)) => {
             commands::magic();
         }
         ("search", Some(m)) => {
             let expression = m.value_of("expression").unwrap();
-            commands::search(&connection, expression);
+            if let Ok(commands) = commands::search(&connection, expression) {
+                output_commands(&commands);
+            };
         }
         ("sqlite3", Some(m)) => {
             let database_url = config::get_database_url();
@@ -78,7 +118,9 @@ pub fn dispatch_command(matches: clap::ArgMatches) {
         }
         ("tail", Some(m)) => {
             let entries = value_t!(m, "entries", i64).unwrap();
-            commands::tail(&connection, entries);
+            if let Ok(commands) = commands::tail(&connection, entries) {
+                output_commands(&commands);
+            };
         }
         ("version", Some(m)) => {
             let mut verbose = false;

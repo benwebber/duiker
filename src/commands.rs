@@ -5,7 +5,6 @@ use std::os::unix::process::CommandExt;
 use std::process::Command;
 use std::str;
 
-use chrono::{UTC, TimeZone};
 use diesel;
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
@@ -28,18 +27,10 @@ const MAGIC: &'static str = r#"__duiker_import() {
 }"#;
 
 
-pub fn head(connection: &SqliteConnection, n: i64) {
+pub fn head(connection: &SqliteConnection, n: i64) -> Result<Vec<models::History>, Error> {
     use schema::history::dsl::*;
-    let commands = history.order(timestamp.asc())
-        .limit(n);
-    let results = commands.load::<models::History>(connection)
-        .expect("Error selecting history");
-    println!("Displaying {} commands.", results.len());
-    for row in results {
-        println!("{}\t{}",
-                 UTC.timestamp(row.timestamp as i64, 0).to_string(),
-                 row.command);
-    }
+    let commands = history.order(timestamp.asc()).limit(n);
+    Ok(commands.load::<models::History>(connection)?)
 }
 
 
@@ -59,7 +50,7 @@ fn parse_history_line(line: &str) -> Result<models::NewCommand, Error> {
 }
 
 
-pub fn import<'a>(connection: &SqliteConnection, reader: Box<BufRead + 'a>, quiet: bool) -> Result<usize, Error> {
+pub fn import<'a>(connection: &SqliteConnection, reader: Box<BufRead + 'a>) -> Result<usize, Error> {
     use schema::history;
     let mut n: usize = 0;
     for line in reader.lines() {
@@ -71,15 +62,9 @@ pub fn import<'a>(connection: &SqliteConnection, reader: Box<BufRead + 'a>, quie
 }
 
 
-pub fn log(connection: &SqliteConnection) {
+pub fn log(connection: &SqliteConnection) -> Result<Vec<models::History>, Error> {
     use schema::history::dsl::*;
-    let results = history.load::<models::History>(connection)
-        .expect("Error selecting history");
-    println!("Displaying {} commands.", results.len());
-    for row in results {
-        let utc = UTC.timestamp(row.timestamp as i64, 0);
-        println!("{}\t{}", utc, row.command);
-    }
+    Ok(history.load::<models::History>(connection)?)
 }
 
 
@@ -88,19 +73,14 @@ pub fn magic() {
 }
 
 
-pub fn search(connection: &SqliteConnection, expression: &str) {
+pub fn search(connection: &SqliteConnection, expression: &str) -> Result<Vec<models::History>, Error> {
     use diesel::expression::sql;
     let query = sql::<(Integer, Integer, Text)>("SELECT history.*
                                                    FROM fts_history
                                                    JOIN history
                                                      ON fts_history.history_id = history.id
                                                   WHERE fts_history MATCH ?");
-    let results =
-        query.bind::<Text, _>(expression).load::<models::History>(connection).expect("Can't ???");
-    for row in results {
-        let utc = UTC.timestamp(row.timestamp as i64, 0);
-        println!("{}\t{}", utc, row.command);
-    }
+    Ok(query.bind::<Text, _>(expression).load::<models::History>(connection)?)
 }
 
 
@@ -111,21 +91,14 @@ pub fn sqlite3(sqlite3_options: Vec<&str>) {
 }
 
 
-pub fn tail(connection: &SqliteConnection, n: i64) {
+pub fn tail(connection: &SqliteConnection, n: i64) -> Result<Vec<models::History>, Error> {
     use schema::history::dsl::*;
     let commands = history.select(id)
         .order(timestamp.desc())
         .limit(n);
     let sorted = history.filter(id.eq_any(commands))
         .order(timestamp.asc());
-    let results = sorted.load::<models::History>(connection)
-        .expect("Error selecting history");
-    println!("Displaying {} commands.", results.len());
-    for row in results {
-        println!("{}\t{}",
-                 UTC.timestamp(row.timestamp as i64, 0).to_string(),
-                 row.command);
-    }
+    Ok(sorted.load::<models::History>(connection)?)
 }
 
 

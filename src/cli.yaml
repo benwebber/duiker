@@ -26,6 +26,18 @@ subcommands:
         about: Show commands from all time.
     - magic:
         about: Print shell function that imports last command.
+        help: |
+          Add this function to your Bash PROMPT_COMMAND. For example:
+
+            eval "$(duiker magic)"
+
+            __prompt() {
+              history -a
+              __duiker_import
+              PS1="\u@\h:\w$ "
+            }
+
+            PROMPT_COMMAND=__prompt
     - search:
         about: Search for a command in the history database.
         args:

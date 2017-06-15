@@ -102,6 +102,17 @@ pub fn tail(connection: &SqliteConnection, n: i64) -> Result<Vec<models::History
 }
 
 
+pub fn top(connection: &SqliteConnection, n: i64) -> Result<Vec<models::Frequency>, Error> {
+    use diesel::expression::sql;
+    let query = sql::<(Integer, Text)>("SELECT COUNT(*) AS frequency, command
+                                          FROM history
+                                         GROUP BY command
+                                         ORDER BY frequency DESC
+                                         LIMIT ?");
+    Ok(query.bind::<BigInt, _>(n).load::<models::Frequency>(connection)?)
+}
+
+
 pub fn version(verbose: bool) {
     println!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
     if verbose {

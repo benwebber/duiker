@@ -122,6 +122,14 @@ pub fn dispatch_command(matches: clap::ArgMatches) {
                 output_commands(&commands);
             };
         }
+        ("top", Some(m)) => {
+            let entries = value_t!(m, "entries", i64).unwrap();
+            if let Ok(commands) = commands::top(&connection, entries) {
+                for command in commands {
+                    println!("\t{}\t{}", command.frequency, command.command);
+                };
+            };
+        }
         ("version", Some(m)) => {
             let mut verbose = false;
             if m.is_present("verbose") {

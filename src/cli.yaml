@@ -42,8 +42,6 @@ subcommands:
         args:
           - sqlite3_options:
               multiple: true
-    - stats:
-        about: Print stats for the history database.
     - tail:
         about: Show last N commands.
         args:
@@ -51,6 +49,13 @@ subcommands:
                 short: n
                 help: recall last N commands
                 default_value: '10'
+    - top:
+        about: Print most frequent commands.
+        args:
+            - entries:
+                short: n
+                help: print N most frequent commands
+                default_value: '20'
     - version:
         about: Print version and exit.
         args:

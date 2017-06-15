@@ -14,3 +14,10 @@ pub struct NewCommand<'a> {
     pub timestamp: i32,
     pub command: &'a str,
 }
+
+
+#[derive(Clone, Debug, Queryable)]
+pub struct Frequency {
+    pub frequency: i32,
+    pub command: String,
+}

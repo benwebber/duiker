@@ -21,7 +21,7 @@ const MAGIC: &'static str = r#"__duiker_import() {
     local _histtimeformat=$HISTTIMEFORMAT
     HISTIGNORE='history*'
     HISTTIMEFORMAT='%s '
-    history 1 | ./target/debug/duiker import --quiet -
+    history 1 | duiker import --quiet -
     HISTIGNORE=$_histignore
     HISTTIMEFORMAT=$_histtimeformat
 }"#;

@@ -1,5 +1,3 @@
-#![feature(slice_patterns)]
-
 #[macro_use] extern crate clap;
 extern crate chrono;
 #[macro_use] extern crate diesel;

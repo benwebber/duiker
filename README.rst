@@ -1,7 +1,7 @@
 duiker
 ======
 
-|travis| |pypi| |pyversions|
+|travis|
 
 Automatically index your shell history in a full-text search database. Magic!
 
@@ -16,18 +16,14 @@ Requirements
 ------------
 
 -  Bash
--  Python 3.5+
+-  Rust 1.17+ (`install with rustup <https://www.rust-lang.org/en-US/install.html>`__)
 
 Install
 -------
 
-Install from pip:
-
 ::
 
-    pip install duiker
-
-Or, simply download the `latest Python zipapp <https://github.com/benwebber/duiker/releases/latest/>`__ and install it to your ``PATH``.
+    make install
 
 Setup
 -----
@@ -36,7 +32,7 @@ Import your existing shell history:
 
 ::
 
-    history | duiker import -
+    HISTTIMEFORMAT='%s ' history | duiker import -
 
 Configuration
 -------------
@@ -98,7 +94,3 @@ MIT
 
 .. |travis| image:: https://travis-ci.org/benwebber/curlrc.svg?branch=master
     :target: https://travis-ci.org/benwebber/duiker
-.. |pypi| image:: https://img.shields.io/pypi/v/duiker.svg
-    :target: https://pypi.python.org/pypi/duiker/
-.. |pyversions| image:: https://img.shields.io/pypi/pyversions/duiker.svg
-    :target: https://www.python.org/doc/versions/

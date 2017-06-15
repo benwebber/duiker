@@ -1,9 +1,6 @@
 ---
-language: python
-python:
-  - '3.5'
-  - '3.6'
-install:
-  - python setup.py install
-  - pip install .[test]
-script: python setup.py test
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly

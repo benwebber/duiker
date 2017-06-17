@@ -1,5 +1,5 @@
 name: duiker
-version: '0.2.0'
+version: '0.1.0'
 about: Automatically index your shell history in a full-text search database. Magic!
 settings:
   - SubcommandRequiredElseHelp

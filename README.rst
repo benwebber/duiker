@@ -16,10 +16,18 @@ Requirements
 ------------
 
 -  Bash
--  Rust 1.17+ (`install with rustup <https://www.rust-lang.org/en-US/install.html>`__)
 
 Install
 -------
+
+Download the `latest release <https://github.com/benwebber/duiker/releases>__` and extract it somewhere on your ``$PATH``.
+
+Alternatively, install Duiker from source. To build the package you will need:
+
+-  `jq <https://stedolan.github.io/jq/>__`
+-  Rust 1.17+ (`install with rustup <https://www.rust-lang.org/en-US/install.html>`__)
+
+Simply run:
 
 ::
 

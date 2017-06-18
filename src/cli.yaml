@@ -27,16 +27,30 @@ subcommands:
     - magic:
         about: Print shell function that imports last command.
         help: |
-          Add this function to your Bash PROMPT_COMMAND. For example:
+          Add the following line to your Bash configuration. This will source the
+          `__duiker_import` function.
 
             eval "$(duiker magic)"
 
+          Add this function as your Bash PROMPT_COMMAND:
+
+            PROMPT_COMMAND=__duiker_import
+
+          Or call it from your existing PROMPT_COMMAND:
+
             __prompt() {
               __duiker_import
-              PS1="\u@\h:\w$ "
             }
 
             PROMPT_COMMAND=__prompt
+
+          If you already use a prompt function, make sure `__duiker_import` is the
+          first command you call inside it:
+
+            __prompt() {
+              __duiker_import
+              __do_something_else
+            }
     - search:
         about: Search for a command in the history database.
         args:

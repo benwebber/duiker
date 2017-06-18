@@ -32,7 +32,6 @@ subcommands:
             eval "$(duiker magic)"
 
             __prompt() {
-              history -a
               __duiker_import
               PS1="\u@\h:\w$ "
             }

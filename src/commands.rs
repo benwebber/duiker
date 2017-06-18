@@ -16,15 +16,7 @@ use models;
 use types::Error;
 
 
-const MAGIC: &'static str = r#"__duiker_import() {
-    local _histignore=$HISTIGNORE
-    local _histtimeformat=$HISTTIMEFORMAT
-    HISTIGNORE='history*'
-    HISTTIMEFORMAT='%s '
-    history 1 | duiker import --quiet -
-    HISTIGNORE=$_histignore
-    HISTTIMEFORMAT=$_histtimeformat
-}"#;
+const MAGIC: &'static str = include_str!("magic.bash");
 
 
 pub fn head(connection: &SqliteConnection, n: i64) -> Result<Vec<models::History>, Error> {
@@ -69,7 +61,7 @@ pub fn log(connection: &SqliteConnection) -> Result<Vec<models::History>, Error>
 
 
 pub fn magic() {
-    println!("{}", MAGIC);
+    print!("{}", MAGIC);
 }
 
 

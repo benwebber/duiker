@@ -96,8 +96,12 @@ pub fn dispatch_command(matches: clap::ArgMatches) {
                 output_commands(&commands);
             };
         }
-        ("magic", Some(_)) => {
-            commands::magic();
+        ("magic", Some(m)) => {
+            if let Some(shell) = m.value_of("shell") {
+                commands::magic(shell);
+            } else {
+                commands::magic("bash");
+            }
         }
         ("search", Some(m)) => {
             let expression = m.value_of("expression").unwrap();

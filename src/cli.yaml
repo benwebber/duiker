@@ -22,6 +22,11 @@ subcommands:
           - input:
               index: 1
               required: true
+          - shell:
+              required: false
+              default_value: bash
+              short: s
+              long: shell
     - log:
         about: Show commands from all time.
     - magic:
@@ -51,6 +56,25 @@ subcommands:
               __duiker_import
               __do_something_else
             }
+          
+          FISH SHELL
+          For fish shell, add the completion to your fish config
+          using the following:
+            
+            duiker magic --shell fish >> ~/.config/fish/config.fish
+
+          Then source your config value to your current session:
+            source ~/.config/fish/config.fish
+        args:
+            - shell:
+                required: false
+                short: s
+                long: shell
+                default_value: bash
+                takes_value: true
+                possible_values:
+                    - bash
+                    - fish
     - search:
         about: Search for a command in the history database.
         args:

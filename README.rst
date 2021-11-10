@@ -15,7 +15,7 @@ Features
 Requirements
 ------------
 
--  Bash
+-  Bash or Fish
 
 Install
 -------
@@ -41,6 +41,12 @@ Import your existing shell history:
 ::
 
     HISTTIMEFORMAT='%s ' history | duiker import -
+
+or in Fish:
+
+::
+    history --show-time="%s " | duiker import -s fish -
+
 
 Configuration
 -------------
@@ -89,7 +95,7 @@ You can use any ``MATCH`` [#]_ expression to search the database:
 Limitations
 -----------
 
-Duiker only supports Bash at present. Pull requests for other shells
+Duiker only supports Bash and Fish at present. Pull requests for other shells
 welcome.
 
 License

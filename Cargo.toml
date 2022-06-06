@@ -10,5 +10,5 @@ diesel = { version = "0.13.0", features = ["chrono", "sqlite"] }
 diesel_codegen = { version = "0.13.0", features = ["sqlite"] }
 lazy_static = "0.2.8"
 libsqlite3-sys = { version = "0.8.0", features = ["bundled"] }
-regex = "0.2"
+regex = "1.5"
 xdg = "2.1.0"
